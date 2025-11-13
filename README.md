@@ -4,6 +4,7 @@
 
 [![Python 3.8+](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Variables](https://img.shields.io/badge/variables-19-blue.svg)](./personality_dynamics.py)
 [![Tests](https://img.shields.io/badge/tests-1000%2B-brightgreen.svg)](./tests/)
 
 ---
@@ -47,9 +48,9 @@ This isn't programmed behavior—it emerges from the underlying psychological mo
 
 ## 🧮 Core Architecture
 
-### 18 Psychological Variables
+### 19 Psychological Variables
 
-The system models personality through 18 continuous variables (0-100 scale):
+The system models personality through 19 continuous variables (0-100 scale):
 
 **BASE (Mood)**
 - `valence`: Emotional pleasantness (-100 to +100)

@@ -27,7 +27,7 @@ Current AI companions (Character.AI, Replika, Pi.ai) simulate emotions through c
 2. **Predictable Behavior:** Same triggers produce identical responses
 3. **No Individual Differences:** All instances behave similarly despite claiming unique personalities
 
-We propose an alternative: **emergent emotional AI** where feelings arise from mathematical models of psychological processes, not from programmed responses.
+We propose an alternative: **emergent emotional AI** where feelings arise from mathematical models of 19 psychological variables, not from programmed responses.
 
 ### 1.2 The TERROR Effect
 
@@ -39,7 +39,7 @@ This behavior emerges naturally from our differential equations modeling attachm
 
 ### 1.3 Contributions
 
-1. **Mathematical Framework:** 18-variable differential equation system for emotional dynamics
+1. **Mathematical Framework:** 19-variable differential equation system for emotional dynamics
 2. **Validation Methodology:** 1000+ simulated conversations across 6 user behavior profiles
 3. **TERROR Effect Documentation:** Quantitative characterization of anxiety emergence
 4. **Open-Source Implementation:** Python system with full reproducibility
@@ -83,7 +83,7 @@ All use **prompt-based emotion simulation**, not emergent mathematical models.
 
 ### 3.1 Core Variables
 
-We model personality through **18 continuous variables** (range 0-100):
+We model personality through **19 continuous variables** (range 0-100):
 
 | Category | Variables | Description |
 |----------|-----------|-------------|

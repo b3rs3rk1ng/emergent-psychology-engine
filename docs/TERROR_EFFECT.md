@@ -411,12 +411,12 @@ This work suggests a new paradigm for emotional AI: instead of instructing model
 ## Appendix B: Reproducibility
 
 All code, tests, and data available at:
-**https://github.com/yourusername/emergent-psychology-engine**
+**https://github.com/ncarrerakevin/emergent-psychology-engine**
 
 To reproduce TERROR Effect validation:
 
 ```bash
-git clone https://github.com/yourusername/emergent-psychology-engine
+git clone https://github.com/ncarrerakevin/emergent-psychology-engine
 cd emergent-psychology-engine
 python3 tests/test_terror_effect.py
 ```

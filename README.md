@@ -127,7 +127,7 @@ Where:
 
 ```bash
 # Clone repository
-git clone https://github.com/yourusername/emergent-psychology-engine.git
+git clone https://github.com/ncarrerakevin/emergent-psychology-engine.git
 cd emergent-psychology-engine
 
 # No external dependencies required (uses only Python stdlib)
@@ -295,7 +295,7 @@ If you use this in research, please cite:
   author = {Navarro, Kevin Antonio},
   title = {Emergent Psychology Engine: Differential Equations for Emotional AI},
   year = {2025},
-  url = {https://github.com/yourusername/emergent-psychology-engine}
+  url = {https://github.com/ncarrerakevin/emergent-psychology-engine}
 }
 ```
 

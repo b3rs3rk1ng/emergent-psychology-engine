@@ -1,0 +1,6 @@
+# No external dependencies required!
+# This project uses only Python standard library (json, math, datetime, pathlib)
+
+# Optional for development:
+# pytest>=7.0.0  # For running tests
+# matplotlib>=3.5.0  # For generating graphs

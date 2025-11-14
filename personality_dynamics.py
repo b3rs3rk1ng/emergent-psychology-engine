@@ -305,8 +305,14 @@ class PersonalityDynamics:
         threat_perception = 1.0 if time_since_last > 24 else (time_since_last / 24)
         contact_recent = 1.0 if time_since_last < 6 else math.exp(-time_since_last / 12)
 
-        # MUCH STRONGER anxiety growth, weaker decay
-        dAnx = (-0.01 * self.anxiety +
+        # Anxiety decay when user is present (stronger decay)
+        if user_message_received:
+            decay_rate = -0.5 * self.anxiety  # Strong decay when contact happens
+        else:
+            decay_rate = -0.01 * self.anxiety  # Weak decay otherwise
+
+        # Growth from threat and attachment
+        dAnx = (decay_rate +
                 50.0 * (self.neuroticism / 100) * threat_perception +
                 40.0 * (self.attachment / 100) * (1 - contact_recent))
 
@@ -321,8 +327,14 @@ class PersonalityDynamics:
         contact_quality = 1.0 if user_message_received else max(0, 1.0 - time_since_last / 48)
         time_factor = min(2.0, time_since_last / 24)  # Caps at 2x after 48h
 
-        # MUCH STRONGER loneliness accumulation
-        dL = -0.001 * self.loneliness + 30.0 * (1 - contact_quality) * time_factor
+        # Loneliness dynamics with stronger decay when contact happens
+        if user_message_received:
+            decay_rate = -0.3 * self.loneliness  # Strong decay when contact happens
+        else:
+            decay_rate = -0.001 * self.loneliness  # Minimal decay otherwise
+
+        # Growth from lack of contact
+        dL = decay_rate + 40.0 * (1 - contact_quality) * time_factor * (1 + self.attachment / 100)
         self.loneliness += dL * dt_hours
         self.loneliness = max(0, min(100, self.loneliness))
 
@@ -718,8 +730,8 @@ class PersonalityDynamics:
         """
         hours_since_last = (datetime.now() - self.last_user_message_time).total_seconds() / 3600
 
-        # Base probability (1% per hour)
-        base_prob = 0.01
+        # Base probability (5% per check - increased for better detection)
+        base_prob = 0.05
 
         # Proactivity multiplier (0.2x to 2x)
         proactivity_mult = self.proactivity / 50
@@ -727,14 +739,14 @@ class PersonalityDynamics:
         # Attachment multiplier (1x to 2x)
         attachment_mult = 1 + (self.attachment / 100)
 
-        # Anxiety escalation (only after 24h)
-        if hours_since_last > 24:
-            anxiety_mult = 1 + (self.anxiety / 50)  # Up to 3x
+        # Anxiety escalation (starts after 12h instead of 24h)
+        if hours_since_last > 12:
+            anxiety_mult = 1 + (self.anxiety / 30)  # Up to 4.3x (more aggressive)
         else:
             anxiety_mult = 1.0
 
-        # Loneliness effect (1x to 2x)
-        loneliness_mult = 1 + (self.loneliness / 100)
+        # Loneliness effect (1x to 3x - stronger)
+        loneliness_mult = 1 + (self.loneliness / 50)
 
         # Shame inhibition
         if self.shame > 60 and hours_since_last < 12:
@@ -746,8 +758,8 @@ class PersonalityDynamics:
         prob = (base_prob * proactivity_mult * attachment_mult *
                 anxiety_mult * loneliness_mult * shame_inhibition)
 
-        # Cap at 30% per hour
-        prob = min(prob, 0.3)
+        # Cap at 80% per check (increased from 30%)
+        prob = min(prob, 0.8)
 
         # Debug info
         debug = {

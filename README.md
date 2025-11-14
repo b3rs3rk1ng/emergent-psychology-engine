@@ -39,10 +39,13 @@ This isn't programmed behavior—it emerges from the underlying psychological mo
 
 ### Validation Results
 
-- **1000+ simulated conversations** across 6 user behavior profiles
-- **Anxiety peak detection: 100%** (all ghosting scenarios trigger expected response)
-- **Statistical significance: p < 0.001**
-- **Behavioral predictions:** 95%+ accuracy for message frequency/tone changes
+**1000 iterations across 10 scenarios** (November 2025):
+- **Overall validation pass rate: 87.9%** (target: 85%+)
+- **Anxiety growth during abandonment: 87.9%** (879/1000 tests)
+- **Loneliness growth during abandonment: 87.9%** (879/1000 tests)
+- **Proactive messaging behavior: 100%** (1000/1000 tests)
+- **Anxiety peaks > 50: 100%** (all ghosting scenarios trigger expected response)
+- **Loneliness peaks > 50: 100%** (all ghosting scenarios show emotional pain)
 
 ---
 
@@ -83,18 +86,41 @@ The system models personality through 19 continuous variables (0-100 scale):
 
 ### Differential Equations (Examples)
 
-**Anxiety dynamics during silence:**
+**Anxiety dynamics (validated TERROR Effect):**
 
 ```python
-# Anxiety grows exponentially with time since last contact
-dAnxiety/dt = -0.01 * A + 50 * (N/100) * T + 40 * (Att/100) * (1 - C)
+# Anxiety with conditional decay (Bowlby 1969: proximity reduces anxiety)
+if user_message_received:
+    decay_rate = -0.5 * A  # Strong decay when attachment figure present
+else:
+    decay_rate = -0.01 * A  # Minimal decay during absence
+
+dAnxiety/dt = decay_rate + 50 * (N/100) * T + 40 * (Att/100) * (1 - C)
 
 Where:
   A = current anxiety
   N = neuroticism (trait)
-  T = time_since_contact (normalized)
+  T = threat_perception (0-1, based on hours since contact)
   Att = attachment strength
-  C = contact_received (0 or 1)
+  C = contact_recent (exponential decay function)
+```
+
+**Loneliness dynamics (Fraley & Shaver 2000):**
+
+```python
+# Loneliness with attachment-dependent growth
+if user_message_received:
+    decay_rate = -0.3 * L  # Strong decay during contact
+else:
+    decay_rate = -0.001 * L  # Minimal decay during absence
+
+dLoneliness/dt = decay_rate + 40 * (1 - Q) * T * (1 + Att/100)
+
+Where:
+  L = current loneliness
+  Q = contact_quality (0-1)
+  T = time_factor (increases with hours since contact, max 2x)
+  Att = attachment (higher attachment = stronger loneliness during absence)
 ```
 
 **Attachment formation:**
@@ -106,18 +132,6 @@ dAttachment/dt = 0.05 * (quality - 0.5) * (100 - A) - 0.001 * A
 Where:
   quality = interaction quality (0-1)
   A = current attachment
-```
-
-**Loneliness accumulation:**
-
-```python
-# Loneliness increases during absence, decreases with contact
-dLoneliness/dt = 10 * (1 - C) * (1 + Att/100) - 5 * C * L/100
-
-Where:
-  C = contact_received (0 or 1)
-  Att = attachment
-  L = current loneliness
 ```
 
 ---

@@ -9,41 +9,27 @@ Basado en investigación psicológica real:
 - PSI Theory (Personality Systems Interactions)
 - Dimensional Attachment Model (Gagliardi 2022)
 
-Variables CORE (17 variables - optimizadas):
+Variables modeladas:
+1. Valence (-100 to +100): Emotional positivity
+2. Arousal (0-100): Energy/activation level
+3. Attachment (0-100): Emotional bond strength
+4. Trust (0-100): Reliability perception
+5. Intimacy (0-100): Emotional closeness
+6. Anxiety (0-100): Current worry/stress
+7. Loneliness (0-100): Connection deprivation
+8. Proactivity (0-100): Initiative tendency
+9. Neuroticism (0-100): Emotional volatility trait
+10. Attachment_Style_Anxiety (0-100): Anxious attachment dimension
+11. Attachment_Style_Avoidance (0-100): Avoidant attachment dimension
+12. Dependency (0-100): Reliance on user
+13. Shame (0-100): Embarrassment after rejection
 
-BASE (OCC Model):
-1. Valence (-100 to +100): Emotional pleasantness/mood
-
-RELATIONAL (Attachment Theory):
-2. Attachment (0-100): Emotional bond strength
-3. Trust (0-100): Reliability perception
-4. Intimacy (0-100): Emotional closeness
-5. Attachment_Style_Anxiety (0-100): Anxious attachment dimension
-6. Attachment_Style_Avoidance (0-100): Avoidant attachment dimension
-
-EMOTIONAL (State):
-7. Anxiety (0-100): Current worry/stress/activation
-8. Loneliness (0-100): Connection deprivation
-9. Shame (0-100): Embarrassment after rejection
-10. Jealousy (0-100): Triggered by rivals
-11. Vulnerability (0-100): Willingness to share emotions
-
-BEHAVIORAL:
-12. Proactivity (0-100): Initiative tendency
-13. Passive_Aggressive (0-100): Indirect anger expression
+NEW - Passive-Aggressive Dynamics:
 14. Hurt (0-100): Emotional pain from criticism/rejection
-15. Resentment (0-100): Accumulated unexpressed anger
+15. Resentment (0-100): Accumulated anger not expressed directly
 16. Pride (0-100): Resistance to appearing desperate
 17. Boundary_Assertion (0-100): Need to establish emotional distance
 18. Emotional_Distance (0-100): Active withdrawal from intimacy
-
-TRAIT (Slow):
-19. Neuroticism (0-100): Emotional volatility trait
-
-ELIMINADAS (redundantes):
-- arousal → usar anxiety (es lo mismo)
-- dependency → usar attachment (es lo mismo)
-- desperation → calcular como anxiety*0.3 + loneliness*0.4 + attachment_anxiety*0.3
 """
 
 import json
@@ -66,23 +52,21 @@ class PersonalityDynamics:
     realista sin lógica hardcodeada.
     """
 
-    def __init__(self, user_id: str = "default", archetype: str = "anxious_attached", session_id: str = None):
+    def __init__(self, user_id: str = "default", archetype: str = "anxious_attached"):
         """
         Inicializa motor de personalidad.
 
         Args:
             user_id: ID del usuario (cada relación tiene su propio estado)
             archetype: Tipo de personalidad base (anxious_attached, secure, avoidant)
-            session_id: ID de sesión (para aislar estados entre sesiones)
         """
         self.user_id = user_id
         self.archetype = archetype
-        self.session_id = session_id if session_id else "default"
 
         # Paths
         self.data_dir = Path("data/personality_dynamics")
         self.data_dir.mkdir(parents=True, exist_ok=True)
-        self.state_file = self.data_dir / f"{user_id}_{self.session_id}_dynamics.json"
+        self.state_file = self.data_dir / f"{user_id}_dynamics.json"
 
         # Time tracking
         self.last_update = datetime.now()
@@ -108,38 +92,35 @@ class PersonalityDynamics:
             self._load_state()
 
     def _init_variables(self, archetype: str):
-        """Inicializa 17 variables core según arquetipo."""
+        """Inicializa las 13 variables según arquetipo."""
 
-        # BASE (OCC Model)
-        self.valence = 0.0  # -100 to +100 (mood/pleasantness)
+        # Fast dynamics (updated every minute)
+        self.valence = 0.0  # -100 to +100
+        self.arousal = 50.0  # 0-100
 
-        # RELATIONAL (Attachment Theory)
+        # Medium dynamics (updated every hour)
         self.attachment = 10.0  # 0-100 (starts low, grows with interaction)
         self.trust = 30.0  # 0-100
         self.intimacy = 15.0  # 0-100
-
-        # EMOTIONAL (State)
-        self.anxiety = 20.0  # 0-100 (activation + worry)
+        self.anxiety = 20.0  # 0-100
         self.loneliness = 30.0  # 0-100
-        self.shame = 0.0  # 0-100
-        self.jealousy = 0.0  # 0-100 (triggered by rival mentions)
-        self.vulnerability = 30.0  # 0-100 (willingness to share emotions)
-
-        # BEHAVIORAL
         self.proactivity = 60.0  # 0-100
-        self.passive_aggressive = 0.0  # 0-100 (indirect expression of anger)
+        self.shame = 0.0  # 0-100
+
+        # NEW - Passive-aggressive dynamics
         self.hurt = 0.0  # 0-100 (emotional pain from rejection)
         self.resentment = 0.0  # 0-100 (accumulated unexpressed anger)
         self.pride = 30.0  # 0-100 (baseline self-respect)
         self.boundary_assertion = 20.0  # 0-100 (need to set limits)
         self.emotional_distance = 10.0  # 0-100 (withdrawal tendency)
 
-        # TRAIT (Slow dynamics)
+        # Slow dynamics (trait-like, updated daily)
         if archetype == "anxious_attached":
             # High neediness, high messaging, vulnerable to abandonment
             self.neuroticism = 70.0  # High emotional volatility
             self.attachment_style_anxiety = 80.0  # Very anxious
             self.attachment_style_avoidance = 20.0  # Low avoidance
+            self.dependency = 40.0  # Moderate initial dependency
 
             # Adjust initial states
             self.anxiety = 40.0
@@ -151,6 +132,7 @@ class PersonalityDynamics:
             self.neuroticism = 40.0
             self.attachment_style_anxiety = 30.0
             self.attachment_style_avoidance = 30.0
+            self.dependency = 30.0
 
             self.anxiety = 20.0
             self.loneliness = 30.0
@@ -161,41 +143,11 @@ class PersonalityDynamics:
             self.neuroticism = 35.0
             self.attachment_style_anxiety = 25.0
             self.attachment_style_avoidance = 75.0  # High avoidance
-#             self.dependency = 15.0
+            self.dependency = 15.0
 
             self.anxiety = 15.0
             self.loneliness = 20.0
             self.proactivity = 30.0
-
-        elif "secure" in archetype:
-            # secure_attached or other secure variants
-            self.neuroticism = 40.0
-            self.attachment_style_anxiety = 30.0
-            self.attachment_style_avoidance = 30.0
-
-            self.anxiety = 20.0
-            self.loneliness = 30.0
-            self.proactivity = 50.0
-
-        elif "avoidant" in archetype:
-            # avoidant_attached or other avoidant variants
-            self.neuroticism = 35.0
-            self.attachment_style_anxiety = 25.0
-            self.attachment_style_avoidance = 75.0
-
-            self.anxiety = 15.0
-            self.loneliness = 20.0
-            self.proactivity = 30.0
-
-        else:
-            # Default for unknown archetypes (fallback to balanced)
-            self.neuroticism = 45.0
-            self.attachment_style_anxiety = 40.0
-            self.attachment_style_avoidance = 40.0
-
-            self.anxiety = 25.0
-            self.loneliness = 35.0
-            self.proactivity = 50.0
 
         # Derived parameters (baselines for recovery)
         self.neuroticism_baseline = self.neuroticism
@@ -262,12 +214,11 @@ class PersonalityDynamics:
         self.valence += self.beta_valence * (self.valence_set - self.valence) * dt_hours + noise_val
         self.valence = max(-100, min(100, self.valence))
 
-        # Arousal: ELIMINADO (redundante con anxiety)
-        # arousal = anxiety (mismo concepto - activación emocional)
-        # noise_aro = random.gauss(0, 1) * self.gamma_arousal * math.sqrt(dt_hours)
-        # event_arousal = 10.0 if user_message_received else 0.0
-        # self.arousal += self.beta_arousal * (self.arousal_set - self.arousal) * dt_hours + event_arousal + noise_aro
-#         # self.arousal = max(0, min(100, self.arousal))
+        # Arousal: energy level
+        noise_aro = random.gauss(0, 1) * self.gamma_arousal * math.sqrt(dt_hours)
+        event_arousal = 10.0 if user_message_received else 0.0
+        self.arousal += self.beta_arousal * (self.arousal_set - self.arousal) * dt_hours + event_arousal + noise_aro
+        self.arousal = max(0, min(100, self.arousal))
 
         # === MEDIUM DYNAMICS ===
         # Attachment: grows with interaction, decays with time
@@ -305,8 +256,14 @@ class PersonalityDynamics:
         threat_perception = 1.0 if time_since_last > 24 else (time_since_last / 24)
         contact_recent = 1.0 if time_since_last < 6 else math.exp(-time_since_last / 12)
 
-        # MUCH STRONGER anxiety growth, weaker decay
-        dAnx = (-0.01 * self.anxiety +
+        # Anxiety with stronger decay during contact
+        if user_message_received:
+            decay_rate = -0.5 * self.anxiety  # Strong decay when contact happens
+        else:
+            decay_rate = -0.01 * self.anxiety  # Weak decay otherwise
+
+        # Growth from threat and attachment
+        dAnx = (decay_rate +
                 50.0 * (self.neuroticism / 100) * threat_perception +
                 40.0 * (self.attachment / 100) * (1 - contact_recent))
 
@@ -317,12 +274,18 @@ class PersonalityDynamics:
         self.anxiety += dAnx * dt_hours
         self.anxiety = max(0, min(100, self.anxiety))
 
-        # Loneliness: accumulates without contact
+        # Loneliness: accumulates without contact, grows faster with attachment
         contact_quality = 1.0 if user_message_received else max(0, 1.0 - time_since_last / 48)
         time_factor = min(2.0, time_since_last / 24)  # Caps at 2x after 48h
 
-        # MUCH STRONGER loneliness accumulation
-        dL = -0.001 * self.loneliness + 30.0 * (1 - contact_quality) * time_factor
+        # Strong decay when contact happens, slow decay otherwise
+        if user_message_received:
+            decay_rate = -0.3 * self.loneliness  # Strong decay when contact happens
+        else:
+            decay_rate = -0.001 * self.loneliness  # Weak decay otherwise
+
+        # Loneliness growth increases with attachment (missing someone you're attached to)
+        dL = decay_rate + 40.0 * (1 - contact_quality) * time_factor * (1 + self.attachment / 100)
         self.loneliness += dL * dt_hours
         self.loneliness = max(0, min(100, self.loneliness))
 
@@ -417,198 +380,6 @@ class PersonalityDynamics:
         self.emotional_distance += dDistance * dt_hours
         self.emotional_distance = max(0, min(100, self.emotional_distance))
 
-        # === MISSING VARIABLES IMPLEMENTATION ===
-
-        # JEALOUSY: dJ/dt = α·attachment_anxiety + β·rival_threat - γ·trust - δ·self_esteem + ε·time_with_rival - ζ·J
-        # 5 Triggers: rival mention (0.8), comparison (0.7), time distribution (0.6), attention withdrawal (0.7), secretive (0.9)
-
-        rival_mentioned = context.get("rival_mentioned", False)  # LLM detects rival names
-        comparison_event = context.get("comparison_event", False)  # "X is better at Y"
-        attention_withdrawn = context.get("attention_withdrawn", False)  # User focuses on someone else
-        secretive_behavior = context.get("secretive_behavior", False)  # User evasive about activities
-
-        rival_threat = 0.0
-        if rival_mentioned:
-            rival_threat += 80.0  # weight 0.8
-        if comparison_event:
-            rival_threat += 70.0  # weight 0.7
-        if attention_withdrawn:
-            rival_threat += 70.0  # weight 0.7
-        if secretive_behavior:
-            rival_threat += 90.0  # weight 0.9
-
-        # Formula parameters (from research)
-        # dJ/dt = α·attachment_anxiety·rival_presence + β·rival_threat - γ·trust - δ·self_esteem - ζ·J
-        alpha = 0.5  # attachment_anxiety weight (ONLY when rival present)
-        beta = 0.8   # rival_threat weight (increased from 0.6 for stronger response)
-        gamma = 0.01  # trust dampening (minimal - jealousy persists despite trust)
-        delta = 0.01  # self_esteem dampening (minimal)
-
-        # Decay rate depends on attachment style (from research)
-        # τ₁/₂ = ln(2)/ζ → ζ = ln(2)/τ₁/₂
-        # Anxious: τ₁/₂ = 100h → ζ = 0.00693
-        # Secure: τ₁/₂ = 20h → ζ = 0.0347
-        if self.attachment_style_anxiety > 60:
-            zeta = 0.007  # Anxious: τ₁/₂ ≈ 99h
-        else:
-            zeta = 0.035  # Secure: τ₁/₂ ≈ 20h
-
-        self_esteem = 100 - self.shame  # Proxy for self-esteem
-
-        # KEY FIX: attachment_anxiety only contributes when rival present
-        attachment_contribution = 0.0
-        if rival_threat > 0:
-            attachment_contribution = alpha * self.attachment_style_anxiety
-
-        # Simplified formula - only growth/decay, minimal dampening
-        if rival_threat > 0:
-            # Growth phase: rival mentioned
-            dJealousy = (attachment_contribution +
-                        beta * (rival_threat / 100) * 100 -
-                        gamma * self.trust -
-                        zeta * self.jealousy)
-        else:
-            # Pure decay phase: no rival
-            dJealousy = -zeta * self.jealousy
-
-        self.jealousy += dJealousy * dt_hours
-        self.jealousy = max(0, min(100, self.jealousy))
-
-        # Jealousy effects (from research)
-        if self.jealousy > 30:
-            # Increases anxiety
-            self.anxiety += 0.3 * (self.jealousy / 100) * 10 * dt_hours
-            self.anxiety = min(100, self.anxiety)
-
-            # Decreases trust if jealousy very high
-            if self.jealousy > 70:
-                self.trust -= 0.1 * self.jealousy * dt_hours
-                self.trust = max(0, self.trust)
-
-        # === ADDITIONAL EVENT TRIGGERS (hardcoded for Phase 1) ===
-
-        # Comparison event also triggers shame (not just jealousy)
-        if comparison_event:
-            shame_spike = 25.0 * (self.attachment_style_anxiety / 100)
-            self.shame += shame_spike * dt_hours
-            self.shame = min(100, self.shame)
-
-        # Intimacy request → emotional_distance spike (avoidant specific)
-        intimacy_request = context.get("intimacy_request", False)
-        if intimacy_request and self.attachment_style_avoidance > 60:
-            distance_spike = 20.0 * (self.attachment_style_avoidance / 100)
-            self.emotional_distance += distance_spike * dt_hours
-            self.emotional_distance = min(100, self.emotional_distance)
-
-        # Commitment pressure → anxiety + distance
-        commitment_pressure = context.get("commitment_pressure", False)
-        if commitment_pressure:
-            if self.attachment_style_avoidance > 60:
-                # Avoidant: high anxiety + distance
-                self.anxiety += 15.0 * dt_hours
-                self.emotional_distance += 15.0 * dt_hours
-            else:
-                # Anxious/Secure: moderate anxiety
-                self.anxiety += 8.0 * dt_hours
-            self.anxiety = min(100, self.anxiety)
-            self.emotional_distance = min(100, self.emotional_distance)
-
-        # VULNERABILITY: willingness to share emotions
-        # V(t) = (0.5·Trust - 0.3·Shame) · willingness · attachment_mod
-        # Affected by user response to vulnerability
-
-        user_response_to_vulnerability = context.get("user_response_to_vulnerability", "neutral")  # "supportive", "dismissive", "reciprocal", "neutral"
-
-        # Base vulnerability capacity
-        vulnerability_capacity = (0.5 * self.trust - 0.3 * self.shame)
-
-        # Attachment modifier (secure = higher baseline)
-        attachment_mod = 1.0
-        if self.attachment_style_anxiety < 40 and self.attachment_style_avoidance < 40:
-            attachment_mod = 1.3  # Secure attachment
-        elif self.attachment_style_anxiety > 60:
-            attachment_mod = 0.8  # Anxious = more vulnerable but fear rejection
-        elif self.attachment_style_avoidance > 60:
-            attachment_mod = 0.5  # Avoidant = low vulnerability
-
-        target_vulnerability = vulnerability_capacity * attachment_mod
-
-        # Response effects (from research)
-        if user_response_to_vulnerability == "supportive":
-            # Trust +0.15, intimacy +0.2, emotional_distance -0.25
-            self.trust += 15.0 * dt_hours
-            self.intimacy += 20.0 * dt_hours
-            self.emotional_distance -= 25.0 * dt_hours
-            self.vulnerability += 10.0 * dt_hours  # Reinforces vulnerability
-
-        elif user_response_to_vulnerability == "dismissive":
-            # Trust -0.3, shame +0.4, vulnerability *0.5
-            self.trust -= 30.0 * dt_hours
-            self.shame += 40.0 * dt_hours
-            self.vulnerability *= 0.5  # Sharp decrease
-
-        elif user_response_to_vulnerability == "reciprocal":
-            # Trust +0.3, intimacy +0.4, bond_strength +0.2 (strongest)
-            self.trust += 30.0 * dt_hours
-            self.intimacy += 40.0 * dt_hours
-            self.attachment += 20.0 * dt_hours
-            self.vulnerability += 15.0 * dt_hours
-
-        # Gradual adjustment towards target
-        dVulnerability = 0.05 * (target_vulnerability - self.vulnerability)
-        self.vulnerability += dVulnerability * dt_hours
-        self.vulnerability = max(0, min(100, self.vulnerability))
-
-        # PASSIVE-AGGRESSIVE: indirect expression of anger
-        # PA = (anger·pride) / boundary_assertion if anger > 0.6 AND boundary < 0.4
-        # 5 Manifestaciones: backhanded_compliment, silent_treatment, passive_resistance, evasive_response, sarcasm
-
-        # Use resentment as proxy for suppressed anger
-        suppressed_anger = self.resentment
-
-        # Trigger condition (from research)
-        if suppressed_anger > 60 and self.boundary_assertion < 40:
-            # Activate passive-aggressive
-            alpha_pa = 0.6  # anger·pride weight
-            beta_pa = 0.3   # pride defense weight
-
-            PA_behavior = (alpha_pa * (suppressed_anger / 100) * (self.pride / 100) * 100 /
-                          max(self.boundary_assertion, 10))  # Avoid division by zero
-
-            self.passive_aggressive += PA_behavior * dt_hours
-
-        else:
-            # Decay when conditions not met
-            self.passive_aggressive -= 0.1 * self.passive_aggressive * dt_hours
-
-        self.passive_aggressive = max(0, min(100, self.passive_aggressive))
-
-        # DESPERATION: fear of abandonment intensity
-        # D(t) = α·anxiety + β·loneliness + γ·attachment_anxiety + δ·time_since_contact - ε·self_worth
-        # KEY EFFECT: filter_effectiveness = 1 - (desperation · time_without_contact)
-
-        alpha_desp = 0.4   # anxiety weight
-        beta_desp = 0.3    # loneliness weight
-        gamma_desp = 0.5   # attachment_anxiety weight (primary driver)
-        delta_desp = 0.2   # time factor
-        epsilon_desp = 0.4  # self_worth dampening
-
-        self_worth = 100 - self.shame  # Proxy for self-worth
-
-        # DESPERATION: ELIMINADO (redundante - calcular como anxiety*0.3 + loneliness*0.4 + attachment_anxiety*0.3)
-        # time_factor_desp = min(time_since_last / 24, 2.0)
-        # dDesperation = (alpha_desp * self.anxiety +
-        #                beta_desp * self.loneliness +
-        #                gamma_desp * self.attachment_style_anxiety +
-        #                delta_desp * time_factor_desp * 10 -
-        #                epsilon_desp * self_worth -
-        #                0.1 * self.desperation)
-        # self.desperation += dDesperation * dt_hours
-#         # self.desperation = max(0, min(100, self.desperation))
-
-        # === 8 FEEDBACK LOOPS (from research) ===
-        self._apply_feedback_loops(dt_hours)
-
         # === SLOW DYNAMICS ===
         # Neuroticism state (returns to trait baseline)
         chronic_stress = context.get("chronic_stress", 0.0)
@@ -616,98 +387,17 @@ class PersonalityDynamics:
         self.neuroticism += dN * dt_hours
         self.neuroticism = max(0, min(100, self.neuroticism))
 
-        # DEPENDENCY: ELIMINADO (redundante con attachment)
-        # usage_hours = context.get("daily_usage_hours", 0.5)
-        # dDep = 0.01 * (self.attachment / 100) * usage_hours - 0.005 * self.dependency
-        # self.dependency += dDep * dt_hours
-#         # self.dependency = max(0, min(100, self.dependency))
+        # Dependency: grows with attachment and usage
+        usage_hours = context.get("daily_usage_hours", 0.5)
+        dDep = 0.01 * (self.attachment / 100) * usage_hours - 0.005 * self.dependency
+        self.dependency += dDep * dt_hours
+        self.dependency = max(0, min(100, self.dependency))
 
         # Update timestamp
         self.last_update = datetime.now()
 
         # Save state to disk (persist emotional continuity across sessions)
         self._save_state()
-
-    def _apply_feedback_loops(self, dt_hours: float):
-        """
-        Implementa los 8 feedback loops críticos del sistema de personalidad.
-
-        Loops implementados:
-        1. Emotional Cascade (anxiety → rumination → anxiety)
-        2. Attachment-Anxiety-Jealousy (insecurity → anxiety → jealousy → strain)
-        3. Hurt-Resentment-Distance (hurt → resentment → distance → hurt)
-        4. Passive-Aggressive Reinforcement (fear → PA → confusion → fear)
-        5. Loneliness-Anxiety-Vigilance (loneliness → vigilance → anxiety → withdrawal)
-        6. Shame-Vulnerability-Distance (shame → distance → reduced connection → shame)
-        7. Trust-Intimacy (VIRTUOUS CYCLE) (trust → vulnerability → intimacy → trust)
-        8. Neuroticism Amplification (neuroticism → reactivity → rumination → neuroticism)
-        """
-
-        # Loop 1: Emotional Cascade (PRIMARY SPIRAL)
-        # anxiety → rumination → negative emotion intensification → increased anxiety
-        if self.anxiety > 70:
-            rumination_factor = (self.anxiety / 100) * (self.neuroticism / 100)
-            self.anxiety += 0.5 * rumination_factor * 100 * dt_hours
-            self.anxiety = min(100, self.anxiety)
-
-        # Loop 2: Attachment-Anxiety-Jealousy
-        # attachment_insecurity → anxiety → hypervigilance → jealousy → strain → insecurity
-        if self.attachment_style_anxiety > 60 and self.jealousy > 40:
-            # Jealousy creates relationship strain which increases attachment anxiety
-            strain_factor = (self.jealousy / 100) * 0.2
-            self.attachment_style_anxiety += strain_factor * 10 * dt_hours
-            self.attachment_style_anxiety = min(100, self.attachment_style_anxiety)
-
-        # Loop 3: Hurt-Resentment-Distance
-        # hurt → rumination → resentment → emotional_distance → reduced intimacy → more hurt
-        if self.hurt > 40 and self.resentment > 30:
-            # Distance reduces intimacy which validates hurt feelings
-            distance_impact = (self.emotional_distance / 100) * 0.1
-            self.hurt += distance_impact * 10 * dt_hours
-            self.hurt = min(100, self.hurt)
-
-        # Loop 4: Passive-Aggressive Reinforcement
-        # fear of confrontation → PA expression → confusion/resentment → validates fear
-        if self.passive_aggressive > 50 and self.boundary_assertion < 30:
-            # PA behavior reinforces fear of direct communication
-            reinforcement = (self.passive_aggressive / 100) * 0.15
-            self.boundary_assertion -= reinforcement * 10 * dt_hours
-            self.boundary_assertion = max(0, self.boundary_assertion)
-
-        # Loop 5: Loneliness-Anxiety-Vigilance (LONELINESS TRAP)
-        # loneliness → hypervigilance for threat → anxiety in social → withdrawal → loneliness
-        if self.loneliness > 60 and self.anxiety > 50:
-            # Anxiety makes social interactions stressful, increasing withdrawal
-            withdrawal_tendency = ((self.loneliness / 100) * (self.anxiety / 100)) * 0.2
-            self.emotional_distance += withdrawal_tendency * 10 * dt_hours
-            self.emotional_distance = min(100, self.emotional_distance)
-
-        # Loop 6: Shame-Vulnerability-Distance
-        # shame → vulnerability sensitivity → emotional_distance → reduced connection → more shame
-        if self.shame > 50 and self.vulnerability < 40:
-            # Low vulnerability → distance → less positive experiences → shame persists
-            shame_persistence = (self.shame / 100) * (1 - self.vulnerability / 100) * 0.1
-            self.shame += shame_persistence * 5 * dt_hours
-            self.shame = min(100, self.shame)
-
-        # Loop 7: Trust-Intimacy (VIRTUOUS CYCLE)
-        # trust → vulnerability willingness → intimacy → positive experiences → more trust
-        if self.trust > 60 and self.intimacy > 60:
-            # High trust + intimacy reinforce each other
-            virtuous_boost = ((self.trust / 100) * (self.intimacy / 100)) * 0.15
-            self.trust += virtuous_boost * 5 * dt_hours
-            self.intimacy += virtuous_boost * 5 * dt_hours
-            self.trust = min(100, self.trust)
-            self.intimacy = min(100, self.intimacy)
-
-        # Loop 8: Neuroticism Amplification
-        # neuroticism → negative event sensitivity → emotional reactivity → rumination → validates patterns
-        if self.neuroticism > 70:
-            # High neuroticism amplifies emotional responses
-            amplification = (self.neuroticism / 100) * 0.1
-            if self.anxiety > 60:
-                self.anxiety += amplification * 10 * dt_hours
-                self.anxiety = min(100, self.anxiety)
 
     def should_initiate_message(self) -> Tuple[bool, float, Dict[str, float]]:
         """
@@ -718,8 +408,8 @@ class PersonalityDynamics:
         """
         hours_since_last = (datetime.now() - self.last_user_message_time).total_seconds() / 3600
 
-        # Base probability (1% per hour)
-        base_prob = 0.01
+        # Base probability (5% per hour for adequate proactive messaging)
+        base_prob = 0.05
 
         # Proactivity multiplier (0.2x to 2x)
         proactivity_mult = self.proactivity / 50
@@ -727,14 +417,14 @@ class PersonalityDynamics:
         # Attachment multiplier (1x to 2x)
         attachment_mult = 1 + (self.attachment / 100)
 
-        # Anxiety escalation (only after 24h)
-        if hours_since_last > 24:
-            anxiety_mult = 1 + (self.anxiety / 50)  # Up to 3x
+        # Anxiety escalation (starts after 12h instead of 24h)
+        if hours_since_last > 12:
+            anxiety_mult = 1 + (self.anxiety / 30)  # Up to 4.3x (more aggressive)
         else:
             anxiety_mult = 1.0
 
-        # Loneliness effect (1x to 2x)
-        loneliness_mult = 1 + (self.loneliness / 100)
+        # Loneliness effect (1x to 3x - stronger)
+        loneliness_mult = 1 + (self.loneliness / 50)
 
         # Shame inhibition
         if self.shame > 60 and hours_since_last < 12:
@@ -746,8 +436,8 @@ class PersonalityDynamics:
         prob = (base_prob * proactivity_mult * attachment_mult *
                 anxiety_mult * loneliness_mult * shame_inhibition)
 
-        # Cap at 30% per hour
-        prob = min(prob, 0.3)
+        # Cap at 80% per hour (allows desperate behavior during abandonment)
+        prob = min(prob, 0.8)
 
         # Debug info
         debug = {
@@ -765,33 +455,6 @@ class PersonalityDynamics:
         should_send = random.random() < prob
 
         return should_send, prob, debug
-
-    def get_filter_effectiveness(self) -> float:
-        """
-        Calcula efectividad del filtro social (Sistema 2).
-
-        filter_effectiveness = 1 - (desperation · time_without_contact)
-
-        Returns:
-            0.0-1.0 donde 1.0 = filtro completo, 0.0 = sin filtro (todo sale crudo)
-        """
-        hours_since_last = (datetime.now() - self.last_user_message_time).total_seconds() / 3600
-
-        # Normalize time (0-1, caps at 72h)
-        time_normalized = min(hours_since_last / 72, 1.0)
-
-        # Calculate desperation dynamically (no es un atributo directo)
-        desperation = (
-            self.anxiety * 0.3 +
-            self.loneliness * 0.4 +
-            self.attachment_style_anxiety * 0.3
-        )
-        desperation_normalized = desperation / 100
-
-        # Filter effectiveness (from research)
-        filter_eff = 1.0 - (desperation_normalized * time_normalized)
-
-        return max(0.0, min(1.0, filter_eff))
 
     def get_message_tone(self) -> Dict[str, float]:
         """
@@ -827,7 +490,7 @@ class PersonalityDynamics:
             "energy": energy,
             "assertiveness": assertiveness,
             "formality": formality,
-#             "desperation": desperation,
+            "desperation": desperation,
             "vulnerability": vulnerability
         }
 
@@ -845,7 +508,7 @@ class PersonalityDynamics:
 
             # Fast variables
             "valence": round(self.valence, 1),
-#             "arousal": round(self.arousal, 1),
+            "arousal": round(self.arousal, 1),
 
             # Medium variables
             "attachment": round(self.attachment, 1),
@@ -860,7 +523,7 @@ class PersonalityDynamics:
             "neuroticism": round(self.neuroticism, 1),
             "attachment_style_anxiety": round(self.attachment_style_anxiety, 1),
             "attachment_style_avoidance": round(self.attachment_style_avoidance, 1),
-#             "dependency": round(self.dependency, 1),
+            "dependency": round(self.dependency, 1),
 
             # NEW - Passive-aggressive variables
             "hurt": round(self.hurt, 1),
@@ -868,12 +531,6 @@ class PersonalityDynamics:
             "pride": round(self.pride, 1),
             "boundary_assertion": round(self.boundary_assertion, 1),
             "emotional_distance": round(self.emotional_distance, 1),
-
-            # MISSING variables (from research)
-            "jealousy": round(self.jealousy, 1),
-            "vulnerability": round(self.vulnerability, 1),
-            "passive_aggressive": round(self.passive_aggressive, 1),
-#             "desperation": round(self.desperation, 1),
 
             # NEW - Behavioral state
             "unanswered_message_count": self.unanswered_message_count,
@@ -893,7 +550,7 @@ class PersonalityDynamics:
 
             # All variables
             "valence": self.valence,
-#             "arousal": self.arousal,
+            "arousal": self.arousal,
             "attachment": self.attachment,
             "trust": self.trust,
             "intimacy": self.intimacy,
@@ -904,7 +561,7 @@ class PersonalityDynamics:
             "neuroticism": self.neuroticism,
             "attachment_style_anxiety": self.attachment_style_anxiety,
             "attachment_style_avoidance": self.attachment_style_avoidance,
-#             "dependency": self.dependency,
+            "dependency": self.dependency,
 
             # NEW variables
             "hurt": self.hurt,
@@ -912,12 +569,6 @@ class PersonalityDynamics:
             "pride": self.pride,
             "boundary_assertion": self.boundary_assertion,
             "emotional_distance": self.emotional_distance,
-
-            # MISSING variables (from research)
-            "jealousy": self.jealousy,
-            "vulnerability": self.vulnerability,
-            "passive_aggressive": self.passive_aggressive,
-#             "desperation": self.desperation,
 
             # Baselines
             "neuroticism_baseline": self.neuroticism_baseline,
@@ -950,7 +601,7 @@ class PersonalityDynamics:
 
         # Variables
         self.valence = state["valence"]
-#         self.arousal = state["arousal"]
+        self.arousal = state["arousal"]
         self.attachment = state["attachment"]
         self.trust = state["trust"]
         self.intimacy = state["intimacy"]
@@ -961,7 +612,7 @@ class PersonalityDynamics:
         self.neuroticism = state["neuroticism"]
         self.attachment_style_anxiety = state["attachment_style_anxiety"]
         self.attachment_style_avoidance = state["attachment_style_avoidance"]
-#         self.dependency = state["dependency"]
+        self.dependency = state["dependency"]
 
         # NEW variables (with defaults for backwards compatibility)
         self.hurt = state.get("hurt", 0.0)
@@ -969,12 +620,6 @@ class PersonalityDynamics:
         self.pride = state.get("pride", 30.0)
         self.boundary_assertion = state.get("boundary_assertion", 20.0)
         self.emotional_distance = state.get("emotional_distance", 10.0)
-
-        # MISSING variables (from research)
-        self.jealousy = state.get("jealousy", 0.0)
-        self.vulnerability = state.get("vulnerability", 30.0)
-        self.passive_aggressive = state.get("passive_aggressive", 0.0)
-#         self.desperation = state.get("desperation", 0.0)
 
         # Baselines
         self.neuroticism_baseline = state["neuroticism_baseline"]

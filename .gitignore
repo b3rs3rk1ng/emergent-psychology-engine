@@ -4,13 +4,11 @@ __pycache__/
 *$py.class
 *.so
 .Python
-build/
 develop-eggs/
 dist/
 downloads/
 eggs/
 .eggs/
-lib/
 lib64/
 parts/
 sdist/
@@ -44,7 +42,7 @@ htmlcov/
 # Test results
 test_results/
 *.log
-*.json
+data/personality_dynamics/terror_test_*
 
 # Jupyter
 .ipynb_checkpoints/

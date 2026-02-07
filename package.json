@@ -9,6 +9,7 @@
     "start": "next start"
   },
   "dependencies": {
+    "@ai-sdk/openai": "^3.0.26",
     "@hookform/resolvers": "^3.10.0",
     "@paper-design/shaders-react": "0.0.68",
     "@radix-ui/react-accordion": "1.2.2",

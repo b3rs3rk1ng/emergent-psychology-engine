@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from "react"
 import { MessageSquareDashed } from "lucide-react"
 import { MessageList } from "./message-list"
-import { Composer, type AIModel } from "./composer"
+import { Composer } from "./composer"
 import { Button } from "@/components/ui/button"
 
 // Data model for messages
@@ -17,7 +17,6 @@ export interface Message {
 
 // localStorage key for persisting messages
 const STORAGE_KEY = "chat-messages"
-const MODEL_STORAGE_KEY = "chat-selected-model"
 
 // Generates a unique ID for messages
 function generateId(): string {
@@ -29,7 +28,6 @@ export function ChatShell() {
   const [isStreaming, setIsStreaming] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [abortController, setAbortController] = useState<AbortController | null>(null)
-  const [selectedModel, setSelectedModel] = useState<AIModel>("google/gemini-2.0-flash-001")
   const [isLoaded, setIsLoaded] = useState(false)
 
   // Load messages from localStorage on mount
@@ -43,10 +41,6 @@ export function ChatShell() {
           createdAt: new Date(msg.createdAt),
         }))
         setMessages(messagesWithDates)
-      }
-      const savedModel = localStorage.getItem(MODEL_STORAGE_KEY) as AIModel | null
-      if (savedModel) {
-        setSelectedModel(savedModel)
       }
     } catch (e) {
       console.error("Failed to load from localStorage:", e)
@@ -63,11 +57,6 @@ export function ChatShell() {
       console.error("Failed to save messages to localStorage:", e)
     }
   }, [messages])
-
-  const handleModelChange = useCallback((model: AIModel) => {
-    setSelectedModel(model)
-    localStorage.setItem(MODEL_STORAGE_KEY, model)
-  }, [])
 
   // Send a message to the AI
   const sendMessage = useCallback(
@@ -110,7 +99,6 @@ export function ChatShell() {
               content: m.content,
               imageData: m.imageData,
             })),
-            model: selectedModel,
           }),
           signal: controller.signal,
         })
@@ -157,7 +145,7 @@ export function ChatShell() {
         setAbortController(null)
       }
     },
-    [messages, isStreaming, selectedModel],
+    [messages, isStreaming],
   )
 
   const retry = useCallback(() => {
@@ -208,8 +196,6 @@ export function ChatShell() {
         onStop={stopStreaming}
         isStreaming={isStreaming}
         disabled={!!error}
-        selectedModel={selectedModel}
-        onModelChange={handleModelChange}
       />
     </div>
   )

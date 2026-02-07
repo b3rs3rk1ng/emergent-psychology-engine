@@ -1,94 +1,43 @@
+import { openai } from "@ai-sdk/openai"
 import { streamText } from "ai"
 
-/**
- * POST /api/chat
- *
- * This route handler proxies requests to the Vercel AI Gateway.
- * It receives messages from the frontend and streams the AI response back.
- */
 export async function POST(req: Request) {
+  const apiKey = process.env.OPENAI_API_KEY
+  console.log("[chat] API key present:", !!apiKey, "length:", apiKey?.length)
+
   try {
-    const { messages, model } = await req.json()
+    const { messages } = await req.json()
 
     if (!messages || !Array.isArray(messages)) {
-      return new Response(JSON.stringify({ error: "Invalid request: messages array required" }), {
-        status: 400,
-        headers: { "Content-Type": "application/json" },
-      })
+      return new Response(JSON.stringify({ error: "messages array required" }), { status: 400 })
     }
 
-    const selectedModel = model || "google/gemini-2.0-flash-001"
-
-    const lastIndex = messages.length - 1
-    const transformedMessages = messages.map(
-      (m: { role: string; content: string; imageData?: string }, index: number) => {
-        // Only process image for the last user message
-        const isLastUserMessage = index === lastIndex && m.role === "user"
-
-        if (isLastUserMessage && m.imageData && m.imageData.startsWith("data:image/")) {
-          // For the current message with an image, use multimodal content format
-          return {
-            role: m.role as "user" | "assistant",
-            content: [
-              {
-                type: "image" as const,
-                image: m.imageData,
-              },
-              {
-                type: "text" as const,
-                text: m.content || "Describe this image in detail.",
-              },
-            ],
-          }
-        }
-
-        // For all other messages (history), use text only
-        // If there was an image, mention it in the text
-        let textContent = m.content
-        if (m.imageData && !isLastUserMessage) {
-          textContent = m.content || "[User shared an image]"
-        }
-
-        return {
-          role: m.role as "user" | "assistant",
-          content: textContent,
-        }
-      },
-    )
-
-    // Filter out any messages with empty content
-    const validMessages = transformedMessages.filter((m: { content: string | object[] }) => {
-      if (typeof m.content === "string") {
-        return m.content.trim().length > 0
-      }
-      return true // Keep multimodal messages
-    })
+    const validMessages = messages
+      .map((m: { role: string; content: string }) => ({
+        role: m.role as "user" | "assistant",
+        content: m.content,
+      }))
+      .filter((m: { content: string }) => m.content.trim().length > 0)
 
     if (validMessages.length === 0) {
-      return new Response(JSON.stringify({ error: "No valid messages to process" }), {
-        status: 400,
-        headers: { "Content-Type": "application/json" },
-      })
+      return new Response(JSON.stringify({ error: "No valid messages" }), { status: 400 })
     }
 
-    const result = streamText({
-      model: selectedModel,
+    console.log("[chat] Calling OpenAI gpt-4.1-mini with", validMessages.length, "messages")
+
+    const result = await streamText({
+      model: openai("gpt-4.1-mini"),
       messages: validMessages,
-      system: `You are a helpful, friendly AI assistant. You provide clear, concise, and accurate responses. 
-When explaining code or technical concepts, use markdown formatting with code blocks where appropriate.
-Be conversational but professional. If you're unsure about something, say so honestly.
-When analyzing images, describe them in detail and answer any questions about them.`,
+      system: "You are a helpful, friendly AI assistant. Be conversational but professional.",
     })
 
+    console.log("[chat] Stream created, returning response")
     return result.toTextStreamResponse()
   } catch (error) {
-    console.error("Chat API error:", error)
-
+    console.error("[chat] ERROR:", error)
     return new Response(
-      JSON.stringify({
-        error: error instanceof Error ? error.message : "An unexpected error occurred",
-      }),
-      { status: 500, headers: { "Content-Type": "application/json" } },
+      JSON.stringify({ error: error instanceof Error ? error.message : "Unknown error" }),
+      { status: 500 }
     )
   }
 }

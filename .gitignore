@@ -51,3 +51,14 @@ test_results/
 
 # OS
 Thumbs.db
+
+# Node / Next.js
+node_modules/
+.next/
+out/
+npm-debug.log*
+.env*
+.vercel
+*.tsbuildinfo
+next-env.d.ts
+package-lock.json

@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import type { Emotion } from "@/components/orb/ai-orb"
 
 interface Scenario {
@@ -152,6 +152,8 @@ interface ScenarioPanelProps {
 export function ScenarioPanel({ onScenarioSelect }: ScenarioPanelProps) {
   const [activeScenario, setActiveScenario] = useState<string | null>(null)
   const [chatHistory, setChatHistory] = useState<{ role: "user" | "ai"; content: string }[]>([])
+  const [fading, setFading] = useState(false)
+  const pendingScenarioRef = useRef<Scenario | null>(null)
 
   // Load greeting scenario on mount
   useEffect(() => {
@@ -165,13 +167,21 @@ export function ScenarioPanel({ onScenarioSelect }: ScenarioPanelProps) {
   }, [])
 
   const handleScenarioClick = (scenario: Scenario) => {
+    if (fading) return
     setActiveScenario(scenario.id)
-    setChatHistory((prev) => [
-      ...prev,
-      { role: "user", content: scenario.userMessage },
-      { role: "ai", content: scenario.aiResponse },
-    ])
     onScenarioSelect(scenario.emotion, scenario.variables)
+
+    // Fade out, replace, fade in
+    setFading(true)
+    pendingScenarioRef.current = scenario
+    setTimeout(() => {
+      const s = pendingScenarioRef.current!
+      setChatHistory([
+        { role: "user", content: s.userMessage },
+        { role: "ai", content: s.aiResponse },
+      ])
+      setFading(false)
+    }, 300)
   }
 
   return (
@@ -183,7 +193,10 @@ export function ScenarioPanel({ onScenarioSelect }: ScenarioPanelProps) {
       </div>
 
       {/* Chat history */}
-      <div className="flex-1 overflow-y-auto px-6 py-4 space-y-3">
+      <div
+        className="flex-1 overflow-y-auto px-6 py-4 space-y-3 transition-opacity duration-300"
+        style={{ opacity: fading ? 0 : 1 }}
+      >
         {chatHistory.length === 0 && (
           <div className="flex items-center justify-center h-full text-stone-300 text-sm">
             Select a scenario to begin
